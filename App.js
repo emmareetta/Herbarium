@@ -1,41 +1,24 @@
 import { StatusBar } from 'expo-status-bar';
 import { Button, StyleSheet, Text, View } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import HomeScreen from './components/HomeScreen';
+import Herbarium from './components/Herbarium';
+import Plant from './components/Plant';
 
 export default function App() {
+
+  const Stack = createNativeStackNavigator();
+
   return (
-    <View style={styles.container}>
-      <Text style={{fontSize: 18, fontWeight: 'bold', color: '#555843', paddingBottom: 15}}>KASVIO, your mobile way to make herbarium!</Text>
-      <Text style={{fontWeight: 'bold'}}>What is herbarium?</Text>
-      <Text style={{maxWidth: 250, fontSize: 14}}>Herbarium is way to collect flora and learn from nature. Traditionally herbarium is dome by pressing and drying plants 
-        and preserving them in a folder. </Text>
-     <View
-     style={{padding: 20}}>
-        <Button 
-          title='Register'
-          onPress={null}
-          color= '#555843'
-        />
-      </View>
-
-      <View
-      style={{padding: 20}}>
-        <Button
-          title='Start new herbarium'
-          onPress={null}
-          color= '#F1C376'
-        />
-      </View>
-
-      <View>
-        <Button
-          title='List of Plants'
-          color= '#F1C376'
-          onPress={null}
-        />
-      </View>
-
-      <StatusBar style="auto" />
-    </View>
+   <NavigationContainer>
+    <Stack.Navigator>
+      <Stack.Screen name='Home' component={HomeScreen} />
+      <Stack.Screen name='Herbarium' component={Herbarium} />
+      <Stack.Screen name='Plant' component={Plant} />
+    </Stack.Navigator>
+   </NavigationContainer>
+   
   );
 }
 
