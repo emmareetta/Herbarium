@@ -2,6 +2,7 @@ import { StatusBar } from "expo-status-bar";
 import { Text, View, Button, StyleSheet } from "react-native";
 import { Chip } from '@rneui/themed';
 import * as Linking from 'expo-linking';
+import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 
 
 export default function Plant() {
@@ -39,7 +40,6 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#FFF4F4',
         flexDirection: 'row',
-       // alignItems: 'center',
         paddingLeft: 100,
         paddingTop: 20
     }

@@ -10,7 +10,7 @@ export default function HomeScreen({ navigation }) {
     <View style={styles.container}>
       <Text style={{fontSize: 18, fontWeight: 'bold', color: '#555843', paddingBottom: 15}}>KASVIO, your mobile way to make herbarium!</Text>
       <Text style={{fontWeight: 'bold'}}>What is herbarium?</Text>
-      <Text style={{maxWidth: 250, fontSize: 14}}>Herbarium is way to collect flora and learn from nature. Traditionally herbarium is dome by pressing and drying plants 
+      <Text style={{maxWidth: 250, fontSize: 14}}>Herbarium is way to collect flora and learn from nature. Traditionally herbarium is done by pressing and drying plants 
         and preserving them in a folder. </Text>
      <View
      style={{padding: 20}}>
