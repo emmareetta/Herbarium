@@ -1,65 +1,65 @@
 import { StatusBar } from "expo-status-bar";
-import { SafeAreaView, SectionList, StyleSheet } from "react-native";
+import {
+  SafeAreaView,
+  ScrollView,
+  SectionList,
+  StyleSheet,
+  TouchableOpacity,
+} from "react-native";
 import { Text, View, Button } from "react-native";
+import { db } from "../CreateDatabase";
+import { useEffect, useState } from "react";
 
-export default function Herbarium() {
-    const DATA = [
-        {
-            title: 'Puut ja pensaat',
-            data: ['mänty', 'kuusi', 'hieskoivu', 'rauduskoivu', 'pihlaja', 'leppä',
-                    'kataja', 'haapa', 'paju', 'tuomi']
-        },
-        {
-            title: 'Varvut',
-            data: ['mustikka', 'puolukka', 'juolukka', 'kanerva', 'variksenmarja' ]
-        },
-        {
-            title: 'Ruohovartiset',
-            data: ['metsätähti', 'metsälauha', 'oravanmarja']
-        },
-        {
-            title: 'Sanikkaiset',
-            data: ['riidenlieko', 'kallioimarre', 'metsänalvejuuri']
-        },
-        
-    ]
-    return(
-        <SafeAreaView style={styles.container}>
-            <SectionList
-                sections={DATA}
-                keyExtractor={(item, index) => item + index}
-                renderItem={({item}) => (
-                    <View style={styles.item}>
-                        <Text style={styles.title}>{item}</Text>
-                    </View>
-                )}
-                renderSectionHeader={({section: {title}}) => (
-                    <Text style={styles.header}>{title}</Text>
-                )}
-                />
-        </SafeAreaView>
+export default function Herbarium({ navigation }) {
+  const [plants, setPlants] = useState([]);
 
-    )
+  const updatePlants = () => {
+    console.log("UPDATING", db);
+    db.transaction(
+      (tx) => {
+        tx.executeSql("select * from plants;", [], (_, { rows }) => {
+          console.log("RESULT", rows);
+          setPlants(rows._array);
+        });
+      },
+      null,
+      null
+    );
+  };
+
+  useEffect(() => {
+    updatePlants();
+  }, []);
+
+  return (
+    <View style={styles.container}>
+      <ScrollView>
+        <Text>{plants.length}</Text>
+        {plants.map((plant, index) => (
+          <TouchableOpacity
+            key={index}
+            style={styles.button}
+            onPress={() => navigation.navigate("Plant", {plant: plant})}
+          >
+            <Text>{plant.name}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: '#fff',
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    item: {
-        backgroundColor: '#F7E6C4',
-        padding: 20,
-        marginVertical: 8
-    },
-    header: {
-        fontSize: 18,
-        backgroundColor: '#fff'
-    },
-    title: {
-        fontSize: 14,
-    },
-  });
-  
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  button: {
+    alignItems: "center",
+    backgroundColor: "#F1C376",
+    padding: 10,
+    marginTop: 15,
+  },
+});

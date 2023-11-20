@@ -2,7 +2,6 @@ import { StatusBar } from 'expo-status-bar';
 import { Button, StyleSheet, Text, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import Herbarium from './Herbarium';
 
 export default function HomeScreen({ navigation }) {
 
@@ -12,14 +11,7 @@ export default function HomeScreen({ navigation }) {
       <Text style={{fontWeight: 'bold'}}>What is herbarium?</Text>
       <Text style={{maxWidth: 250, fontSize: 14}}>Herbarium is way to collect flora and learn from nature. Traditionally herbarium is done by pressing and drying plants 
         and preserving them in a folder. </Text>
-     <View
-     style={{padding: 20}}>
-        <Button 
-          title='Register'
-          onPress={null}
-          color= '#555843'
-        />
-      </View>
+     
 
       <View
       style={{padding: 20}}>

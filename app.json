@@ -9,19 +9,29 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#ffffff",
+      "plugins": [
+            [
+              "expo-image-picker",
+              {
+                "photosPermission": "The app accesses your photos to let you share them with your friends."
+              }
+            ]
+          ]
     },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "org.leino.kasvioapp"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "org.leino.kasvioapp"
     },
     "web": {
       "favicon": "./assets/favicon.png"
