@@ -3,7 +3,7 @@ Käytetyt teknologiat:
 React Native
 sqLite
 Expo
-Expo imagePicker, kuvatiedoston valinta kättämällä joko galleriaa tai laitteen kameraa
+Expo imagePicker, kuvatiedoston valinta käyttämällä joko galleriaa tai laitteen kameraa
 Expo MapView, karttanäkymä
 Expo filesystem, kuvan tallentaminen sovellukseen ja täältä saatu sijainti tallennettiin tietokantaan
 Expo location, paikantaa laitteen 
