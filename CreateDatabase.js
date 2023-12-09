@@ -1,8 +1,39 @@
 import * as SQLite from "expo-sqlite";
 
-export const db = SQLite.openDatabase("kasviodb8.db");
+export const db = SQLite.openDatabase("data.db");
 
-export function CreateDatabase() {
+async function checkDatabaseExists() {
+  console.log("CREATE DATABASE 2");
+  try {
+  const resultSet = await db.execAsync([
+    {
+      sql: "SELECT COUNT(*) AS count FROM sqlite_master WHERE type = 'table' AND tbl_name = 'plant_group'", 
+      args: []
+    },
+  ],
+    true
+  );
+  const tableExists = resultSet[0].rows[0].count == 1;
+  if (tableExists) {
+    console.log("DATABASE ALREADY EXISTS")
+    return true
+  } else {
+    console.log("DATABASE DOES NOT EXIST")
+    return false
+  }
+} catch (err) {
+  console.log("ERROR", err)
+  return true
+}
+}
+
+export async function CreateDatabase() {
+  console.log("CREATE DATABASE");
+
+  if (await checkDatabaseExists()) {
+    return
+  }
+
   const DATA = [
     {
       id: 1,
@@ -114,7 +145,6 @@ export function CreateDatabase() {
     },
   ];
 
-
   db.transaction(
     (tx) => {
       tx.executeSql(
@@ -134,25 +164,39 @@ export function CreateDatabase() {
   );
 
   DATA.forEach((group) => {
-    console.log("INSERT", group.title)
-    db.transaction((tx) => {
-      tx.executeSql("insert or replace into plant_group (id, title) values (?, ?); ", [
-        group.id,
-        group.title,
-      ]);
-    }, (err) => console.error("Error when crating DB", err));
+    console.log("INSERT", group.title);
+    db.transaction(
+      (tx) => {
+        tx.executeSql(
+          "insert or replace into plant_group (id, title) values (?, ?); ",
+          [group.id, group.title]
+        );
+      },
+      (err) => console.error("Error when crating DB", err)
+    );
 
     group.items.forEach((item) => {
-        console.log("INSERT PLANT", item.name,item.external_id, group.id)
+      console.log("INSERT PLANT", item.name, item.external_id, group.id);
 
-        db.transaction((tx) => {
+      db.transaction(
+        (tx) => {
           tx.executeSql(
-            "insert into plants (name, external_id, plant_group) values (?, ?, ?);", [
-              item.name, item.external_id, group.id
-            ]
+            "insert into plants (name, external_id, plant_group) values (?, ?, ?);",
+            [item.name, item.external_id, group.id]
           );
-        },  (err) => console.error("Error when crating DB", err));
-      });
-
+        },
+        (err) => console.error("Error when crating DB", err)
+      );
+    });
   });
-};
+
+  db.transaction(
+    (tx) => {
+      tx.executeSql(
+        "CREATE TABLE IF NOT EXISTS herbarium (id integer primary key, name text, plant_id integer forein key, image text, latitude text, longitude text, information text); "
+      );
+      console.log("HERBARIUM TABLE");
+    },
+    () => console.error("Error when creating Table")
+  );
+}

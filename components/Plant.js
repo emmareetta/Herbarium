@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { StatusBar } from "expo-status-bar";
 import {
   Text,
   View,
@@ -8,25 +7,77 @@ import {
   Image,
   TextInput,
   TouchableOpacity,
+  ScrollView,
+  Alert
 } from "react-native";
 import { Chip } from "@rneui/themed";
 import * as Linking from "expo-linking";
 import * as ImagePicker from "expo-image-picker";
+import MapView from "react-native-maps";
+import * as Location from "expo-location";
+import { db } from "../CreateDatabase";
+import * as FileSystem from "expo-file-system";
 
-
-export default function Plant({route, navigation}) {
+export default function Plant({ route, navigation }) {
   const { plant } = route.params;
   const [image, setImage] = useState(null);
+  const [event, setEvent] = useState(undefined);
+  const [gpsLocation, setGpsLocation] = useState(null);
+  const [location, setLocation] = useState(null);
+  const [errorMsg, setErrorMsg] = useState(null);
+
+  const [information, onChangeText] = React.useState("");
+
+  const mapRef = React.createRef();
+
+  const setGpsLocationWithGpsPosition = (position) => {
+    setGpsLocation({
+      latitudeDelta: 0.0922,
+      longitudeDelta: 0.0421,
+      latitude: parseFloat(position.coords.latitude),
+      longitude: parseFloat(position.coords.longitude),
+    });
+  }
+
+  useEffect(() => {
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        setErrorMsg("Permission to access location was denied");
+        return;
+      }
+
+     
+    })();
+
+    updateGpsPosition();
+
+    loadPlant();
+  }, []);
+
+  const updateGpsPosition = () => {
+    Location.getLastKnownPositionAsync().then((newLocation) => {
+      console.log("LAST", newLocation);
+      setGpsLocationWithGpsPosition(newLocation);
+
+      Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+        enableHighAccuracy: true,
+        timeInterval: 5,
+      }).then((newLocation) => {
+        console.log("NEW", newLocation);
+        setGpsLocationWithGpsPosition(newLocation);
+      });
+    });
+  }
 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
+      allowsMultipleSelection: false,
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
       aspect: [4, 3],
       quality: 1,
     });
-
-    console.log(result);
 
     if (!result.canceled) {
       setImage(result.assets[0].uri);
@@ -42,36 +93,120 @@ export default function Plant({route, navigation}) {
     }
 
     const result = await ImagePicker.launchCameraAsync();
-
-    console.log(result);
-
     if (!result.canceled) {
       setImage(result.assets[0].uri);
-      console.log(result.assets[0].uri);
     }
   };
 
-  const [value, onChangeText] = React.useState(
-    "Kuvaa kasvin ympäristöä ja omia kokemuksiasi kasvin löydöstä"
-  );
+  const loadPlant = () => {
+    console.log("LOADING", db);
+    db.transaction(
+      (tx) => {
+        tx.executeSql(
+          "SELECT * FROM herbarium WHERE plant_id = ?;",
+          [plant.id],
+          (_, { rows }) => {
+            console.log("PLANT", rows);
+            const selectedEvent =
+              rows._array.length > 0 ? rows._array[0] : undefined;
+            setEvent(selectedEvent);
+            if (selectedEvent) {
+              setLocation({
+                latitudeDelta: 0.0922,
+                longitudeDelta: 0.0421,
+                latitude: parseFloat(selectedEvent.latitude),
+                longitude: parseFloat(selectedEvent.longitude),
+              });
+            }
+          }
+        );
+      },
+      null,
+      null
+    );
+  };
+
+  let text = "Waiting..";
+  if (errorMsg) {
+    text = errorMsg;
+  } else if (gpsLocation) {
+    text = JSON.stringify(gpsLocation);
+  }
+
+
+  const saveData = () => {
+    console.log("SAVING");
+
+    const imageLocation =
+      FileSystem.documentDirectory + "plant_" + plant.id + "_image";
+    FileSystem.copyAsync({ from: image, to: imageLocation });
+
+    db.transaction(
+      (tx) => {
+        tx.executeSql(
+          "insert into herbarium (name, plant_id, latitude, longitude, image, information) values (?, ?, ?, ?, ?, ?);",
+          [
+            plant.name,
+            plant.id,
+            gpsLocation.latitude,
+            gpsLocation.longitude,
+            imageLocation,
+            information,
+          ]
+        );
+      },
+      (err) => console.error("Error when saving data", err)
+    );
+
+    navigation.navigate("Herbarium");
+  };
+
+  const confirmDeleteEvent = () => {
+    Alert.alert('Vahvista poisto', 'Haluatko varmasti poistaa tallennuksen', [
+      {
+        text: 'Cancel',
+        onPress: () => console.log('Cancel Pressed'),
+        style: 'cancel',
+      },
+      {text: 'OK', onPress: () => deleteEvent()},
+    ]);
+
+  }
+
+  const deleteEvent = () => {
+    db.transaction(
+      (tx) => {
+        tx.executeSql("DELETE FROM herbarium WHERE plant_id = ?;", [plant.id]);
+      },
+      (err) => console.error("Error when deleting data", err),
+      () => {
+        FileSystem.deleteAsync(event.image, { idempotent: true });
+        setEvent(undefined);
+      }
+    );
+  };
 
   return (
-    <View style={styles.main}>
+    <ScrollView style={styles.scrollViev}>
       <View style={styles.containerHeaderLink}>
         <Text style={styles.header}>{plant.name}</Text>
-        <Chip
-          icon={{
-            name: "info",
-            type: "font-awesome",
-            size: 15,
-            color: "#F7E6C4",
-          }}
-          containerStyle={{ marginVertical: 2, marginRight: 100 }}
-          onPress={() =>
-            Linking.openURL(`https://luontoportti.com/t/${plant.external_id}/${plant.name}`)
-          }
-          color="#606C5D"
-        />
+        {plant.external_id && (
+          <Chip
+            icon={{
+              name: "info",
+              type: "font-awesome",
+              size: 15,
+              color: "#F7E6C4",
+            }}
+            containerStyle={{ marginVertical: 2, marginRight: 100 }}
+            onPress={() =>
+              Linking.openURL(
+                `https://luontoportti.com/t/${plant.external_id}/${plant.name}`
+              )
+            }
+            color="#606C5D"
+          />
+        )}
       </View>
 
       <View style={styles.pictures}>
@@ -79,27 +214,86 @@ export default function Plant({route, navigation}) {
           <Image source={{ uri: image }} style={{ width: 200, height: 200 }} />
         )}
 
-        <TouchableOpacity style={styles.button} onPress={() => pickImage()}>
-          <Text>Valitse kuva galleriasta</Text>
-        </TouchableOpacity>
+        {event ? (
+          <View style={styles.savedEvent}>
+            <Text style={styles.information}>{event.information}</Text>
+            <View style={styles.padding}>
+              <Image
+                source={{ uri: event.image }}
+                style={{ width: 200, height: 200 }}
+              />
+            </View>
+            <View style={styles.padding}>
+              <MapView
+                style={{ width: 300, height: 200, paddingTop: 15 }}
+                region={location}
+              ></MapView>
+            </View>
+            <View style={styles.padding}>
+              <Button
+                title="Palaa kasvien listaukseen"
+                onPress={() => navigation.navigate("Herbarium")}
+                color="#606C5D"
+              />
+            </View>
+            <View style={styles.padding}>
+              <Button
+                title="Poista tämä tallennus"
+                onPress={() => confirmDeleteEvent()}
+                color="#A25B5B"
+              />
+            </View>
+          </View>
+        ) : (
+          <>
+          <View style={{flexDirection: "row", justifyContent: "space-between", width: "85%"}}>
+            <TouchableOpacity
+              style={styles.TouchableOpacity}
+              onPress={() => pickImage()}
+            >
+              <Text>Valitse kuva galleriasta</Text>
+            </TouchableOpacity>
 
-        <TouchableOpacity style={styles.button} onPress={openCamera}>
-          <Text>Ota kuva kameralla</Text>
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.TouchableOpacity}
+              onPress={openCamera}
+            >
+              <Text>Ota kuva kameralla</Text>
+            </TouchableOpacity>
+            </View>
+            <TextInput
+              editable
+              placeholder="Kuvaa kasvin ympäristöä ja omia kokemuksiasi kasvin löydöstä"
+              multiline
+              numberOfLines={4}
+              maxLength={100}
+              onChangeText={(text) => onChangeText(text)}
+              value={information}
+              style={{ padding: 10, marginBottom: 10, fontSize: 16 }}
+              backgroundColor="#E4E4D0"
+            
+            />
 
-        <TextInput
-          editable
-          multiline
-          numberOfLines={4}
-          maxLength={100}
-          onChangeText={(text) => onChangeText(text)}
-          value={value}
-          style={{ padding: 10 }}
-        />
+            <MapView
+              style={{ flex: 1, width: 200, height: 200 }}
+              ref={mapRef}
+              region={gpsLocation}
+            ></MapView>
 
-        <Button title="Tallenna" color="#F1C376" />
+            <View style={styles.button}>
+              <Button
+                title="Paikanna"
+                color="#F1C376"
+                onPress={() => updateGpsPosition()}
+              />
+            </View>
+            <View style={styles.button}>
+              <Button title="Tallenna" color="#606C5D" onPress={saveData} />
+            </View>
+          </>
+        )}
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -109,35 +303,45 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     fontSize: 25,
+    textTransform: "capitalize",
   },
   containerHeaderLink: {
-    flex: 1 / 4,
     backgroundColor: "#FFF4F4",
     flexDirection: "row",
     paddingLeft: 100,
     paddingTop: 20,
     paddingBottom: 30,
   },
-  main: {
-    flex: 1,
+  information: {
     backgroundColor: "#FFF4F4",
     paddingTop: 20,
+    fontSize: 18,
   },
   pictures: {
+    flex: 1,
     backgroundColor: "#FFF4F4",
-    flex: 3,
-
     alignItems: "center",
   },
-  textInput: {
-    alignItems: "center",
-    justifyContent: "center",
-    flex: 1,
+  padding: {
+    paddingTop: 20,
   },
   button: {
     alignItems: "center",
-    backgroundColor: "#AEC3AE",
     padding: 10,
-    marginTop: 15,
+    marginTop: 10,
+  },
+  TouchableOpacity: {
+    alignItems: "center",
+    padding: 10,
+    marginTop: 10,
+    marginBottom: 15,
+    backgroundColor: "#AEC3AE",
+  },
+  savedEvent: {
+    alignItems: "center",
+  },
+  scrollViev: {
+    flex: 1,
+    backgroundColor: "#FFF4F4",
   },
 });
